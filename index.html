@@ -6,8 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <link rel="icon" type="image/png" href="./image/logo.png">
-    <title>20-20-20 Vision Pro</title>
+    <title>20-20-20 Vision Pro | Eye Care</title>
     <style>
         * {
             margin: 0;
@@ -117,7 +116,6 @@
         .status-active { color: #4ade80; }
         .status-paused { color: #f97316; }
         .status-break { color: #5eead4; }
-        .status-hidden { color: #94a3b8; }
 
         .btn-group {
             display: flex;
@@ -291,27 +289,6 @@
             padding: 10px;
             margin-top: 8px;
         }
-        
-        .toast {
-            position: fixed;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2dd4bf;
-            color: #0a0f1e;
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            z-index: 200;
-            animation: fadeOut 2s ease-in-out;
-        }
-        
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            70% { opacity: 1; }
-            100% { opacity: 0; visibility: hidden; }
-        }
     </style>
 </head>
 <body>
@@ -429,7 +406,7 @@
 </div>
 
 <script>
-    // ========== MULTI-LANGUAGE ==========
+    // ==================== MULTI-LANGUAGE ====================
     const translations = {
         si: {
             timerLabel: "ඊළඟ විවේකයට ඉතිරි කාලය", resetText: "නැවත", pauseText: "නවත්වන්න",
@@ -460,18 +437,15 @@
         }
     };
 
-    // ========== VARIABLES ==========
     let currentLang = 'si';
     let notifEnabled = true, soundEnabled = true, breakDuration = 20, volume = 70, workMinutes = 20;
     let remainingSec = workMinutes * 60;
     let isTimerRunning = true;
-    let isAppVisible = true;  // App minimize status
     let timerInterval = null;
     let breakActive = false;
     let breakRemaining = 0;
     let weeklyData = [0,0,0,0,0,0,0], todayCount = 0, streak = 0, lastDate = "";
 
-    // DOM elements
     const mainView = document.getElementById('mainView');
     const settingsView = document.getElementById('settingsView');
     const navHome = document.getElementById('navHome');
@@ -479,15 +453,79 @@
     const timerDisplay = document.getElementById('timerDisplay');
     const statusSpan = document.getElementById('statusText');
 
-    function showToast(message) {
-        let toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.innerText = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
+    // ========== SOUND FUNCTION ==========
+    let audioCtx = null;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
     }
 
-    // ========== TIMER LOGIC ==========
+    function playBeep() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = initAudio();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = volume / 100;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.6);
+            osc.stop(ctx.currentTime + 0.6);
+        } catch(e) { console.log("Sound error"); }
+    }
+
+    // ========== NOTIFICATION FUNCTION ==========
+    // Variable to store active notification so we can close it later
+    let activeNotification = null;
+
+    function sendNotification(title, body) {
+        if (!notifEnabled) return;
+        
+        if (Notification.permission === 'granted') {
+            // Close previous notification if exists
+            if (activeNotification) {
+                try { activeNotification.close(); } catch(e) {}
+                activeNotification = null;
+            }
+            
+            // Create new notification with the break duration
+            const notification = new Notification(title, {
+                body: body,
+                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232dd4bf"/%3E%3Ctext x="50" y="67" text-anchor="middle" fill="white" font-size="48" font-weight="bold"%3E20%3C/text%3E%3C/svg%3E',
+                vibrate: [200, 100, 200],
+                silent: false,
+                requireInteraction: true
+            });
+            
+            activeNotification = notification;
+            
+            // Play sound
+            playBeep();
+            
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
+    }
+    
+    // Function to close the active notification (called when break finishes)
+    function closeNotification() {
+        if (activeNotification) {
+            try {
+                activeNotification.close();
+            } catch(e) {}
+            activeNotification = null;
+        }
+    }
+
+    // ========== TIMER FUNCTIONS ==========
     function updateDisplay() {
         if (breakActive) {
             timerDisplay.innerHTML = `👁️ ${Math.ceil(breakRemaining)}s`;
@@ -502,39 +540,36 @@
         if (timerInterval) clearInterval(timerInterval);
         
         timerInterval = setInterval(() => {
-            // Timer එක නතර කළ යුතු කොන්දේසි:
-            // 1. User pause කළා නම්
-            // 2. App එක visible නැත්නම් (minimize/home ගියාම) -  මේකෙන් timer නතර වෙනවා
-            //    නමුත් ඔයාට ඕන minimize වුණාට timer නතර නොවෙන්න. ඒ නිසා මේ condition එක ඉවත් කළා.
-            
             if (!isTimerRunning) return;
             
             if (breakActive) {
                 breakRemaining--;
+                updateDisplay();
+                statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${Math.ceil(breakRemaining)} තත්</span>`;
+                
                 if (breakRemaining <= 0) {
+                    // Break finished - close the notification
+                    closeNotification();
+                    
                     breakActive = false;
                     addCompletion();
                     remainingSec = workMinutes * 60;
                     updateDisplay();
                     statusSpan.innerHTML = '<span class="status-active">✅ විවේකය නිමයි!</span>';
                     setTimeout(() => {
-                        if (isTimerRunning && !breakActive && isAppVisible) {
+                        if (isTimerRunning && !breakActive) {
                             statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
                         }
                     }, 2000);
-                } else {
-                    updateDisplay();
-                    statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${Math.ceil(breakRemaining)} තත්</span>`;
                 }
             } else {
                 remainingSec--;
+                updateDisplay();
+                
                 if (remainingSec <= 0) {
-                    remainingSec = 0;
-                    updateDisplay();
                     startBreak();
                 } else {
-                    updateDisplay();
-                    if (isTimerRunning && isAppVisible && !breakActive) {
+                    if (isTimerRunning && !breakActive) {
                         statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
                     }
                 }
@@ -546,10 +581,12 @@
         breakActive = true;
         breakRemaining = breakDuration;
         updateDisplay();
-        sendBreakNotification();
-        playBeep();
+        
+        // Send notification with break duration clearly shown
+        sendNotification("🔔 20-20-20 විවේක කාලය!", 
+            `තත්පර ${breakDuration}ක් අඩි 20ක් ඈත බලන්න! ඔබේ ඇස් විවේක කරගන්න.`);
+        
         statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${breakDuration} තත්</span>`;
-        showToast("🔔 විවේක කාලය! ඈත බලන්න!");
     }
     
     function addCompletion() {
@@ -568,82 +605,27 @@
     }
     
     function resetTimer() {
+        // Close any active notification when resetting
+        closeNotification();
+        
         if (breakActive) {
             breakActive = false;
-            breakRemaining = 0;
         }
         remainingSec = workMinutes * 60;
         isTimerRunning = true;
         updateDisplay();
         statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
-        showToast("⟳ ටයිමරය නැවත ආරම්භ කරන ලදි");
     }
     
     function pauseTimer() {
         isTimerRunning = !isTimerRunning;
         if (!isTimerRunning) {
             statusSpan.innerHTML = '<span class="status-paused">⏸️ නවතා ඇත</span>';
-            showToast("⏸️ ටයිමරය නවතා ඇත");
-        } else if (!breakActive && isAppVisible) {
+        } else if (!breakActive) {
             statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
-            showToast("▶️ ටයිමරය නැවත ආරම්භ කරන ලදි");
         }
     }
     
-    // ========== VISIBILITY API - App Minimize Detect ==========
-    // IMPORTANT: Browser API එකෙන් Screen Lock detect කරන්න බැහැ.
-    // මෙය detect කරන්නේ App minimize/home ගියාම විතරයි.
-    function handleVisibilityChange() {
-        if (document.hidden) {
-            // App එක minimize හෝ home ගියා
-            isAppVisible = false;
-            console.log("App minimized - Timer continues (not stopping)");
-            // Timer එක නතර නොකරයි - දිගටම වැඩ කරයි
-            statusSpan.innerHTML = '<span class="status-hidden">📱 App background එකේ</span>';
-        } else {
-            // App එක නැවත open කළා
-            isAppVisible = true;
-            console.log("App reopened - Timer continues from where it was");
-            if (!breakActive && isTimerRunning) {
-                statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
-            } else if (breakActive) {
-                statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${Math.ceil(breakRemaining)} තත්</span>`;
-            }
-            showToast("📱 යෙදුම නැවත විවෘත කරන ලදි");
-        }
-    }
-    
-    // ========== FUNCTIONS ==========
-    function playBeep() {
-        if (!soundEnabled) return;
-        try {
-            let ctx = new (window.AudioContext || window.webkitAudioContext)();
-            let osc = ctx.createOscillator();
-            let gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            gain.gain.value = volume / 100;
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.6);
-            osc.stop(ctx.currentTime + 0.6);
-            if (ctx.state === 'suspended') ctx.resume();
-        } catch(e) {}
-    }
-    
-    function sendBreakNotification() {
-        if (!notifEnabled) return;
-        if (Notification.permission === 'granted') {
-            new Notification("20-20-20 Vision", { 
-                body: `තත්පර ${breakDuration}ක් අඩි 20ක් ඈත බලන්න!`
-            });
-            playBeep();
-        } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission();
-        }
-    }
-    
-    // Stats functions
     function saveStats() {
         localStorage.setItem('vision_stats', JSON.stringify({ weeklyData, todayCount, lastDate, streak }));
     }
@@ -702,7 +684,6 @@
         }
     }
     
-    // Settings
     function loadSettings() {
         notifEnabled = localStorage.getItem('notif') !== 'false';
         soundEnabled = localStorage.getItem('sound') !== 'false';
@@ -749,7 +730,6 @@
         document.getElementById('minLabel').innerText = t.minLabel;
     }
     
-    // ========== EVENT LISTENERS ==========
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             currentLang = btn.dataset.lang;
@@ -762,6 +742,9 @@
         notifEnabled = !notifEnabled; 
         updateToggles(); 
         localStorage.setItem('notif', notifEnabled);
+        if(notifEnabled && Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
     };
     document.getElementById('soundToggle').onclick = () => { 
         soundEnabled = !soundEnabled; 
@@ -784,7 +767,7 @@
         localStorage.setItem('breakDur', breakDuration);
         localStorage.setItem('volume', volume);
         localStorage.setItem('workMinutes', workMinutes);
-        showToast("✓ සැකසුම් සුරකින ලදි");
+        alert("සැකසුම් සුරකින ලදි!");
     };
     
     document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -812,26 +795,22 @@
     document.getElementById('resetBtn').onclick = resetTimer;
     document.getElementById('pauseBtn').onclick = pauseTimer;
     
-    // Visibility change - detect minimize/home
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !timerInterval && remainingSec > 0) {
+            startTimer();
+        }
+    });
     
-    // ========== INITIALIZATION ==========
     loadStats();
     loadSettings();
     updateLanguage();
-    isTimerRunning = true;
-    isAppVisible = true;
     remainingSec = workMinutes * 60;
     updateDisplay();
-    
-    // Start timer
     startTimer();
     
-    // Request notification permission
-    if (Notification.permission === 'default') Notification.requestPermission();
-    
-    console.log("App started - Timer will continue when minimized");
-    console.log("NOTE: Screen lock detection is NOT possible with Web Browser API");
+    if (Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
 </script>
 </body>
 </html>
