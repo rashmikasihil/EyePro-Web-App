@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <link rel="icon" type="image/png" href="./image/logo.png">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%232dd4bf'/%3E%3Ctext x='50' y='67' text-anchor='middle' fill='white' font-size='48' font-weight='bold'%3E20%3C/text%3E%3C/svg%3E">
     <title>20-20-20 Vision Pro | Eye Care</title>
     <style>
         * {
@@ -355,6 +355,12 @@
                     <div class="toggle-knob"></div>
                 </div>
             </div>
+            <div class="setting-row">
+                <span>🗣️ <span id="voiceLabel">හඬ දැනුම්දීම් (Voice)</span></span>
+                <div class="toggle-switch" id="voiceToggle">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
             
             <div class="work-time-row">
                 <div class="setting-row">
@@ -413,7 +419,7 @@
             timerLabel: "ඊළඟ විවේකයට ඉතිරි කාලය", resetText: "නැවත", pauseText: "නවත්වන්න",
             todayLabel: "අද විවේක", weekLabel: "මෙම සතිය", streakLabel: "අඛණ්ඩ දින",
             chartTitle: "📊 සතිපතා වාර්තාව", settingsTitle: "⚙️ සැකසුම්", notifLabel: "දැනුම්දීම්",
-            soundLabel: "ශබ්ද දැනුම්දීම", breakLabel: "විවේක කාලය (තත්පර)", workLabel: "වැඩ කාලය (විනාඩි)",
+            soundLabel: "ශබ්ද දැනුම්දීම", voiceLabel: "හඬ දැනුම්දීම්", breakLabel: "විවේක කාලය (තත්පර)", workLabel: "වැඩ කාලය (විනාඩි)",
             themeLabel: "තේමාව", volumeLabel: "පරිමාව", saveText: "සුරකින්න", infoTitle: "තොරතුරු",
             navHomeText: "ටයිමරය", navSettingsText: "සැකසුම්", secLabel: "තත්", minLabel: "විනාඩි",
             infoText: "20-20-20 නීතිය: සෑම විනාඩි 20කට වරක් තත්පර 20ක් අඩි 20ක් ඈත බලන්න. ඔබේ ඇස් සෞඛ්‍යය ආරක්ෂා කරගන්න!"
@@ -422,7 +428,7 @@
             timerLabel: "Time until next break", resetText: "Reset", pauseText: "Pause",
             todayLabel: "Today's breaks", weekLabel: "This week", streakLabel: "Day streak",
             chartTitle: "📊 Weekly Report", settingsTitle: "⚙️ Settings", notifLabel: "Notifications",
-            soundLabel: "Sound alerts", breakLabel: "Break (seconds)", workLabel: "Work (minutes)",
+            soundLabel: "Sound alerts", voiceLabel: "Voice alerts", breakLabel: "Break (seconds)", workLabel: "Work (minutes)",
             themeLabel: "Theme", volumeLabel: "Volume", saveText: "Save", infoTitle: "Info",
             navHomeText: "Timer", navSettingsText: "Settings", secLabel: "sec", minLabel: "min",
             infoText: "20-20-20 Rule: Every 20 minutes, look 20 feet away for 20 seconds. Protect your eyes!"
@@ -431,7 +437,7 @@
             timerLabel: "அடுத்த இடைவெளி வரை", resetText: "மீட்டமை", pauseText: "இடைநிறுத்து",
             todayLabel: "இன்றைய இடைவெளிகள்", weekLabel: "இந்த வாரம்", streakLabel: "தொடர் நாட்கள்",
             chartTitle: "📊 வாராந்திர அறிக்கை", settingsTitle: "⚙️ அமைப்புகள்", notifLabel: "அறிவிப்புகள்",
-            soundLabel: "ஒலி அறிவிப்புகள்", breakLabel: "இடைவெளி (விநாடி)", workLabel: "வேலை நேரம் (நிமிடம்)",
+            soundLabel: "ஒலி அறிவிப்புகள்", voiceLabel: "குரல் அறிவிப்புகள்", breakLabel: "இடைவெளி (விநாடி)", workLabel: "வேலை நேரம் (நிமிடம்)",
             themeLabel: "கருப்பொருள்", volumeLabel: "ஒலி அளவு", saveText: "சேமி", infoTitle: "தகவல்",
             navHomeText: "டைமர்", navSettingsText: "அமைப்புகள்", secLabel: "விநா", minLabel: "நிமி",
             infoText: "20-20-20 விதி: ஒவ்வொரு 20 நிமிடங்களுக்கும், 20 விநாடிகள் 20 அடி தூரம் பார்க்கவும்!"
@@ -439,7 +445,7 @@
     };
 
     let currentLang = 'si';
-    let notifEnabled = true, soundEnabled = true, breakDuration = 20, volume = 70, workMinutes = 20;
+    let notifEnabled = true, soundEnabled = true, voiceEnabled = true, breakDuration = 20, volume = 70, workMinutes = 20;
     let remainingSec = workMinutes * 60;
     let isTimerRunning = true;
     let timerInterval = null;
@@ -483,45 +489,66 @@
         } catch(e) { console.log("Sound error"); }
     }
 
-    // ========== NOTIFICATION FUNCTION ==========
-    // Variable to store active notification so we can close it later
+    // ========== VOICE / SPEECH FUNCTION ==========
+    function speak(message) {
+        if (!voiceEnabled) return;
+        try {
+            window.speechSynthesis.cancel();
+            const speech = new SpeechSynthesisUtterance();
+            speech.text = message;
+            speech.volume = volume / 100;
+            speech.rate = 0.9;
+            speech.pitch = 1;
+            window.speechSynthesis.speak(speech);
+        } catch(e) { console.log("Speech error"); }
+    }
+
+    // ========== NOTIFICATION FUNCTION (Phone එකේ උඩින් එන Popup) ==========
     let activeNotification = null;
 
     function sendNotification(title, body) {
+        // Voice announcement
+        speak(body);
+        
+        // Sound beep
+        playBeep();
+        
+        // Browser Popup Notification
         if (!notifEnabled) return;
         
         if (Notification.permission === 'granted') {
-            // Close previous notification if exists
             if (activeNotification) {
                 try { activeNotification.close(); } catch(e) {}
                 activeNotification = null;
             }
             
-            // Create new notification with the break duration
             const notification = new Notification(title, {
                 body: body,
                 icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="50" fill="%232dd4bf"/%3E%3Ctext x="50" y="67" text-anchor="middle" fill="white" font-size="48" font-weight="bold"%3E20%3C/text%3E%3C/svg%3E',
                 vibrate: [200, 100, 200],
                 silent: false,
-                requireInteraction: true
+                requireInteraction: true,
+                tag: 'break-notification'
             });
             
             activeNotification = notification;
             
-            // Play sound
-            playBeep();
+            // Auto close after 10 seconds
+            setTimeout(() => {
+                if (activeNotification) {
+                    try { activeNotification.close(); } catch(e) {}
+                    activeNotification = null;
+                }
+            }, 10000);
             
         } else if (Notification.permission !== 'denied') {
             Notification.requestPermission();
         }
     }
     
-    // Function to close the active notification (called when break finishes)
     function closeNotification() {
         if (activeNotification) {
-            try {
-                activeNotification.close();
-            } catch(e) {}
+            try { activeNotification.close(); } catch(e) {}
             activeNotification = null;
         }
     }
@@ -549,14 +576,13 @@
                 statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${Math.ceil(breakRemaining)} තත්</span>`;
                 
                 if (breakRemaining <= 0) {
-                    // Break finished - close the notification
                     closeNotification();
-                    
                     breakActive = false;
                     addCompletion();
                     remainingSec = workMinutes * 60;
                     updateDisplay();
                     statusSpan.innerHTML = '<span class="status-active">✅ විවේකය නිමයි!</span>';
+                    speak("විවේකය නිමයි. නැවත වැඩ ආරම්භ කරන්න");
                     setTimeout(() => {
                         if (isTimerRunning && !breakActive) {
                             statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
@@ -583,9 +609,8 @@
         breakRemaining = breakDuration;
         updateDisplay();
         
-        // Send notification with break duration clearly shown
-        sendNotification("🔔 20-20-20 විවේක කාලය!", 
-            `තත්පර ${breakDuration}ක් අඩි 20ක් ඈත බලන්න! ඔබේ ඇස් විවේක කරගන්න.`);
+        const message = `තත්පර ${breakDuration}ක් අඩි 20ක් ඈත බලන්න! ඔබේ ඇස් විවේක කරගන්න.`;
+        sendNotification("🔔 20-20-20 විවේක කාලය!", message);
         
         statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${breakDuration} තත්</span>`;
     }
@@ -606,9 +631,7 @@
     }
     
     function resetTimer() {
-        // Close any active notification when resetting
         closeNotification();
-        
         if (breakActive) {
             breakActive = false;
         }
@@ -616,14 +639,17 @@
         isTimerRunning = true;
         updateDisplay();
         statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+        speak("ටයිමරය නැවත සකසන ලදි");
     }
     
     function pauseTimer() {
         isTimerRunning = !isTimerRunning;
         if (!isTimerRunning) {
             statusSpan.innerHTML = '<span class="status-paused">⏸️ නවතා ඇත</span>';
+            speak("ටයිමරය නවතා ඇත");
         } else if (!breakActive) {
             statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+            speak("ටයිමරය නැවත ආරම්භ කරන ලදි");
         }
     }
     
@@ -688,6 +714,7 @@
     function loadSettings() {
         notifEnabled = localStorage.getItem('notif') !== 'false';
         soundEnabled = localStorage.getItem('sound') !== 'false';
+        voiceEnabled = localStorage.getItem('voice') !== 'false';
         breakDuration = parseInt(localStorage.getItem('breakDur')) || 20;
         volume = parseInt(localStorage.getItem('volume')) || 70;
         workMinutes = parseInt(localStorage.getItem('workMinutes')) || 20;
@@ -702,8 +729,10 @@
     function updateToggles() {
         let nt = document.getElementById('notifToggle');
         let st = document.getElementById('soundToggle');
+        let vt = document.getElementById('voiceToggle');
         if (notifEnabled) nt.classList.add('active'); else nt.classList.remove('active');
         if (soundEnabled) st.classList.add('active'); else st.classList.remove('active');
+        if (voiceEnabled) vt.classList.add('active'); else vt.classList.remove('active');
     }
     
     function updateLanguage() {
@@ -718,6 +747,7 @@
         document.getElementById('settingsTitle').innerText = t.settingsTitle;
         document.getElementById('notifLabel').innerText = t.notifLabel;
         document.getElementById('soundLabel').innerText = t.soundLabel;
+        document.getElementById('voiceLabel').innerText = t.voiceLabel;
         document.getElementById('breakLabel').innerText = t.breakLabel;
         document.getElementById('workLabel').innerText = t.workLabel;
         document.getElementById('themeLabel').innerText = t.themeLabel;
@@ -752,6 +782,11 @@
         updateToggles();
         localStorage.setItem('sound', soundEnabled);
     };
+    document.getElementById('voiceToggle').onclick = () => { 
+        voiceEnabled = !voiceEnabled; 
+        updateToggles();
+        localStorage.setItem('voice', voiceEnabled);
+    };
     document.getElementById('saveSettingsBtn').onclick = () => {
         breakDuration = parseInt(document.getElementById('breakTimeInput').value);
         volume = parseInt(document.getElementById('volumeSlider').value);
@@ -765,9 +800,11 @@
         }
         localStorage.setItem('notif', notifEnabled);
         localStorage.setItem('sound', soundEnabled);
+        localStorage.setItem('voice', voiceEnabled);
         localStorage.setItem('breakDur', breakDuration);
         localStorage.setItem('volume', volume);
         localStorage.setItem('workMinutes', workMinutes);
+        speak("සැකසුම් සුරකින ලදි");
         alert("සැකසුම් සුරකින ලදි!");
     };
     
