@@ -6,7 +6,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f172a">
-    <title>20-20-20 Vision Pro | No Scroll</title>
+    <link rel="icon" type="image/png" href="./image/logo.png">
+    <title>20-20-20 Vision Pro</title>
     <style>
         * {
             margin: 0;
@@ -15,7 +16,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Fix full height without scroll */
         html, body {
             height: 100%;
             overflow: hidden;
@@ -34,7 +34,6 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* Main wrapper - fits exactly without scroll bar issues */
         .app-wrapper {
             flex: 1;
             display: flex;
@@ -48,13 +47,11 @@
             -webkit-overflow-scrolling: touch;
         }
 
-        /* Hide scrollbar but keep functionality */
         .app-wrapper::-webkit-scrollbar {
             width: 0;
             background: transparent;
         }
 
-        /* Language Bar */
         .lang-bar {
             display: flex;
             gap: 8px;
@@ -78,7 +75,6 @@
             color: #0a0f1e;
         }
 
-        /* Cards - compact design */
         .card {
             background: rgba(15, 23, 42, 0.75);
             backdrop-filter: blur(20px);
@@ -89,7 +85,6 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.2);
         }
 
-        /* Timer Section - Main Focus */
         .timer-section {
             text-align: center;
             background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(15,23,42,0.7));
@@ -121,6 +116,7 @@
         }
         .status-active { color: #4ade80; }
         .status-paused { color: #f97316; }
+        .status-break { color: #5eead4; }
 
         .btn-group {
             display: flex;
@@ -149,7 +145,6 @@
             color: white;
         }
 
-        /* Stats Row - Compact */
         .stats-row {
             display: flex;
             gap: 10px;
@@ -172,7 +167,6 @@
             color: #94a3b8;
         }
 
-        /* Chart Section */
         .chart-container {
             background: #0a0f1c;
             border-radius: 24px;
@@ -195,7 +189,6 @@
             font-size: 0.6rem;
         }
 
-        /* Settings Panel - Compact */
         .setting-row {
             display: flex;
             justify-content: space-between;
@@ -250,7 +243,6 @@
             margin: 0;
         }
 
-        /* Bottom Nav */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -292,7 +284,6 @@
             display: none !important;
         }
 
-        /* Work duration setting special */
         .work-time-row {
             background: linear-gradient(135deg, #2dd4bf10, #38bdf810);
             border-radius: 20px;
@@ -303,14 +294,12 @@
 </head>
 <body>
 <div class="app-wrapper" id="appWrapper">
-    <!-- Language Bar -->
     <div class="lang-bar">
         <button class="lang-btn" data-lang="si">🇱🇰 සිංහල</button>
         <button class="lang-btn" data-lang="en">🇬🇧 English</button>
         <button class="lang-btn" data-lang="ta">🇱🇰 தமிழ்</button>
     </div>
 
-    <!-- Main Timer View -->
     <div id="mainView">
         <div class="card timer-section">
             <div class="timer-digits" id="timerDisplay">20:00</div>
@@ -324,7 +313,6 @@
             </div>
         </div>
 
-        <!-- Stats Row -->
         <div class="stats-row">
             <div class="stat-box">
                 <div class="stat-number" id="todayCount">0</div>
@@ -340,7 +328,6 @@
             </div>
         </div>
 
-        <!-- Chart Card -->
         <div class="card">
             <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                 <span id="chartTitle" style="font-size: 0.8rem; font-weight: 600;">📊 සතිපතා වාර්තාව</span>
@@ -352,7 +339,6 @@
         </div>
     </div>
 
-    <!-- Settings View -->
     <div id="settingsView" class="hidden">
         <div class="card">
             <h3 style="margin-bottom: 12px; font-size: 1rem;" id="settingsTitle">⚙️ සැකසුම්</h3>
@@ -370,7 +356,6 @@
                 </div>
             </div>
             
-            <!-- විනාඩි 20 වෙනස් කිරීමේ අංශය (Work Duration) -->
             <div class="work-time-row">
                 <div class="setting-row">
                     <span>⏰ <span id="workLabel">වැඩ කාලය (විනාඩි)</span></span>
@@ -382,7 +367,7 @@
             </div>
             
             <div class="setting-row">
-                <span>⏱️ <span id="breakLabel">විවේක කාලය</span></span>
+                <span>⏱️ <span id="breakLabel">විවේක කාලය (තත්පර)</span></span>
                 <div class="time-input-group">
                     <input type="number" id="breakTimeInput" min="5" max="45" value="20">
                     <span id="secLabel">තත්පර</span>
@@ -410,7 +395,6 @@
     </div>
 </div>
 
-<!-- Bottom Navigation -->
 <div class="bottom-nav">
     <button class="nav-item active" id="navHome">
         <div class="nav-icon">⏱️</div>
@@ -423,7 +407,7 @@
 </div>
 
 <script>
-    // ==================== MULTI-LANGUAGE ====================
+    // ========== MULTI-LANGUAGE ==========
     const translations = {
         si: {
             timerLabel: "ඊළඟ විවේකයට ඉතිරි කාලය", resetText: "නැවත", pauseText: "නවත්වන්න",
@@ -454,77 +438,120 @@
         }
     };
 
+    // ========== VARIABLES ==========
     let currentLang = 'si';
     let notifEnabled = true, soundEnabled = true, breakDuration = 20, volume = 70, workMinutes = 20;
-    let remainingSec = workMinutes * 60, isActive = false, screenOn = true, mainInterval = null, breakInterval = null;
+    let remainingSec = workMinutes * 60;
+    let isTimerRunning = true;
+    let timerInterval = null;
+    let breakActive = false;
+    let breakRemaining = 0;
     let weeklyData = [0,0,0,0,0,0,0], todayCount = 0, streak = 0, lastDate = "";
 
-    // DOM
+    // DOM elements
     const mainView = document.getElementById('mainView');
     const settingsView = document.getElementById('settingsView');
     const navHome = document.getElementById('navHome');
     const navSettings = document.getElementById('navSettings');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const statusSpan = document.getElementById('statusText');
 
-    function updateLanguage() {
-        const t = translations[currentLang];
-        document.getElementById('timerLabel').innerText = t.timerLabel;
-        document.getElementById('resetText').innerText = t.resetText;
-        document.getElementById('pauseText').innerText = t.pauseText;
-        document.getElementById('todayLabel').innerText = t.todayLabel;
-        document.getElementById('weekLabel').innerText = t.weekLabel;
-        document.getElementById('streakLabel').innerText = t.streakLabel;
-        document.getElementById('chartTitle').innerText = t.chartTitle;
-        document.getElementById('settingsTitle').innerText = t.settingsTitle;
-        document.getElementById('notifLabel').innerText = t.notifLabel;
-        document.getElementById('soundLabel').innerText = t.soundLabel;
-        document.getElementById('breakLabel').innerText = t.breakLabel;
-        document.getElementById('workLabel').innerText = t.workLabel;
-        document.getElementById('themeLabel').innerText = t.themeLabel;
-        document.getElementById('volumeLabel').innerText = t.volumeLabel;
-        document.getElementById('saveText').innerText = t.saveText;
-        document.getElementById('infoTitle').innerText = t.infoTitle;
-        document.getElementById('infoText').innerText = t.infoText;
-        document.getElementById('navHomeText').innerText = t.navHomeText;
-        document.getElementById('navSettingsText').innerText = t.navSettingsText;
-        document.getElementById('secLabel').innerText = t.secLabel;
-        document.getElementById('minLabel').innerText = t.minLabel;
-    }
-
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            currentLang = btn.dataset.lang;
-            updateLanguage();
-            localStorage.setItem('lang', currentLang);
-        });
-    });
-
+    // ========== TIMER LOGIC (Simple setInterval - no milliseconds) ==========
     function updateDisplay() {
-        let mins = Math.floor(remainingSec / 60);
-        let secs = remainingSec % 60;
-        document.getElementById('timerDisplay').innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+        if (breakActive) {
+            timerDisplay.innerHTML = `👁️ ${Math.ceil(breakRemaining)}s`;
+        } else {
+            let mins = Math.floor(remainingSec / 60);
+            let secs = remainingSec % 60;
+            timerDisplay.innerHTML = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
     }
 
-    function resetWorkDuration() {
-        remainingSec = workMinutes * 60;
-        updateDisplay();
-    }
-
-    function startMainTimer() {
-        if (mainInterval) clearInterval(mainInterval);
-        if (!screenOn) { isActive = false; return; }
-        isActive = true;
-        mainInterval = setInterval(() => {
-            if (isActive && screenOn && remainingSec > 0) {
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            if (!isTimerRunning) return;
+            
+            if (breakActive) {
+                breakRemaining--;
+                if (breakRemaining <= 0) {
+                    // Break finished
+                    breakActive = false;
+                    addCompletion();
+                    remainingSec = workMinutes * 60;
+                    updateDisplay();
+                    statusSpan.innerHTML = '<span class="status-active">✅ විවේකය නිමයි!</span>';
+                    setTimeout(() => {
+                        if (isTimerRunning && !breakActive) {
+                            statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+                        }
+                    }, 2000);
+                } else {
+                    updateDisplay();
+                    statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${Math.ceil(breakRemaining)} තත්</span>`;
+                }
+            } else {
                 remainingSec--;
-                updateDisplay();
-                if (remainingSec === 0) {
-                    clearInterval(mainInterval);
+                if (remainingSec <= 0) {
+                    remainingSec = 0;
+                    updateDisplay();
                     startBreak();
+                } else {
+                    updateDisplay();
+                    if (isTimerRunning) {
+                        statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+                    }
                 }
             }
         }, 1000);
     }
-
+    
+    function startBreak() {
+        breakActive = true;
+        breakRemaining = breakDuration;
+        updateDisplay();
+        sendBreakNotification();
+        playBeep();
+        statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${breakDuration} තත්</span>`;
+    }
+    
+    function addCompletion() {
+        const today = new Date().toDateString();
+        if (lastDate !== today) {
+            lastDate = today;
+            todayCount = 0;
+        }
+        todayCount++;
+        let wd = new Date().getDay();
+        let idx = wd === 0 ? 6 : wd - 1;
+        weeklyData[idx]++;
+        saveStats();
+        updateStatsUI();
+        renderChart();
+    }
+    
+    function resetTimer() {
+        if (breakActive) {
+            breakActive = false;
+            breakRemaining = 0;
+        }
+        remainingSec = workMinutes * 60;
+        isTimerRunning = true;
+        updateDisplay();
+        statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+    }
+    
+    function pauseTimer() {
+        isTimerRunning = !isTimerRunning;
+        if (!isTimerRunning) {
+            statusSpan.innerHTML = '<span class="status-paused">⏸️ නවතා ඇත</span>';
+        } else if (!breakActive) {
+            statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+        }
+    }
+    
+    // ========== FUNCTIONS ==========
     function playBeep() {
         if (!soundEnabled) return;
         try {
@@ -541,58 +568,24 @@
             if (ctx.state === 'suspended') ctx.resume();
         } catch(e) {}
     }
-
-    function sendNotif(title, body) {
-        if (notifEnabled && Notification.permission === 'granted') {
-            new Notification(title, { body });
+    
+    function sendBreakNotification() {
+        if (!notifEnabled) return;
+        if (Notification.permission === 'granted') {
+            new Notification("20-20-20 Vision", { 
+                body: `තත්පර ${breakDuration}ක් අඩි 20ක් ඈත බලන්න!`
+            });
             playBeep();
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission();
         }
     }
-
-    function startBreak() {
-        if (mainInterval) clearInterval(mainInterval);
-        isActive = false;
-        let breakRemaining = breakDuration;
-        sendNotif("20-20-20 Vision", `Look 20 feet away for ${breakDuration} seconds!`);
-        if (breakInterval) clearInterval(breakInterval);
-        breakInterval = setInterval(() => {
-            if (breakRemaining > 0) {
-                document.getElementById('timerDisplay').innerHTML = `👁️ ${breakRemaining}s`;
-                breakRemaining--;
-            } else {
-                clearInterval(breakInterval);
-                breakInterval = null;
-                addCompletion();
-                remainingSec = workMinutes * 60;
-                updateDisplay();
-                startMainTimer();
-                document.getElementById('statusText').innerHTML = '<span class="status-active">✅ Break done</span>';
-                setTimeout(() => {
-                    if(isActive) document.getElementById('statusText').innerHTML = '<span class="status-active">🟢 Active</span>';
-                }, 2000);
-            }
-        }, 1000);
-    }
-
-    function addCompletion() {
-        const today = new Date().toDateString();
-        if (lastDate !== today) {
-            lastDate = today;
-            todayCount = 0;
-        }
-        todayCount++;
-        let wd = new Date().getDay();
-        let idx = wd === 0 ? 6 : wd - 1;
-        weeklyData[idx]++;
-        saveStats();
-        updateStatsUI();
-        renderChart();
-    }
-
+    
+    // Stats functions
     function saveStats() {
         localStorage.setItem('vision_stats', JSON.stringify({ weeklyData, todayCount, lastDate, streak }));
     }
-
+    
     function loadStats() {
         let saved = localStorage.getItem('vision_stats');
         if (saved) {
@@ -607,14 +600,14 @@
         updateStatsUI();
         renderChart();
     }
-
+    
     function updateStatsUI() {
         document.getElementById('todayCount').innerText = todayCount;
         let total = weeklyData.reduce((a,b)=>a+b,0);
         document.getElementById('weekTotal').innerText = total;
         document.getElementById('streakCount').innerText = streak;
     }
-
+    
     function renderChart() {
         let canvas = document.getElementById('weeklyCanvas');
         let ctx = canvas.getContext('2d');
@@ -646,7 +639,7 @@
             labelDiv.appendChild(div);
         }
     }
-
+    
     // Settings
     function loadSettings() {
         notifEnabled = localStorage.getItem('notif') !== 'false';
@@ -658,34 +651,80 @@
         document.getElementById('workMinutesInput').value = workMinutes;
         document.getElementById('volumeSlider').value = volume;
         updateToggles();
-        resetWorkDuration();
+        remainingSec = workMinutes * 60;
+        updateDisplay();
     }
+    
     function updateToggles() {
         let nt = document.getElementById('notifToggle');
         let st = document.getElementById('soundToggle');
         if (notifEnabled) nt.classList.add('active'); else nt.classList.remove('active');
         if (soundEnabled) st.classList.add('active'); else st.classList.remove('active');
     }
-    document.getElementById('notifToggle').onclick = () => { notifEnabled = !notifEnabled; updateToggles(); };
-    document.getElementById('soundToggle').onclick = () => { soundEnabled = !soundEnabled; updateToggles(); };
+    
+    function updateLanguage() {
+        const t = translations[currentLang];
+        document.getElementById('timerLabel').innerText = t.timerLabel;
+        document.getElementById('resetText').innerText = t.resetText;
+        document.getElementById('pauseText').innerText = t.pauseText;
+        document.getElementById('todayLabel').innerText = t.todayLabel;
+        document.getElementById('weekLabel').innerText = t.weekLabel;
+        document.getElementById('streakLabel').innerText = t.streakLabel;
+        document.getElementById('chartTitle').innerText = t.chartTitle;
+        document.getElementById('settingsTitle').innerText = t.settingsTitle;
+        document.getElementById('notifLabel').innerText = t.notifLabel;
+        document.getElementById('soundLabel').innerText = t.soundLabel;
+        document.getElementById('breakLabel').innerText = t.breakLabel;
+        document.getElementById('workLabel').innerText = t.workLabel;
+        document.getElementById('themeLabel').innerText = t.themeLabel;
+        document.getElementById('volumeLabel').innerText = t.volumeLabel;
+        document.getElementById('saveText').innerText = t.saveText;
+        document.getElementById('infoTitle').innerText = t.infoTitle;
+        document.getElementById('infoText').innerText = t.infoText;
+        document.getElementById('navHomeText').innerText = t.navHomeText;
+        document.getElementById('navSettingsText').innerText = t.navSettingsText;
+        document.getElementById('secLabel').innerText = t.secLabel;
+        document.getElementById('minLabel').innerText = t.minLabel;
+    }
+    
+    // ========== EVENT LISTENERS ==========
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentLang = btn.dataset.lang;
+            updateLanguage();
+            localStorage.setItem('lang', currentLang);
+        });
+    });
+    
+    document.getElementById('notifToggle').onclick = () => { 
+        notifEnabled = !notifEnabled; 
+        updateToggles(); 
+        localStorage.setItem('notif', notifEnabled);
+    };
+    document.getElementById('soundToggle').onclick = () => { 
+        soundEnabled = !soundEnabled; 
+        updateToggles();
+        localStorage.setItem('sound', soundEnabled);
+    };
     document.getElementById('saveSettingsBtn').onclick = () => {
         breakDuration = parseInt(document.getElementById('breakTimeInput').value);
         volume = parseInt(document.getElementById('volumeSlider').value);
         let newWork = parseInt(document.getElementById('workMinutesInput').value);
         if (newWork >= 1 && newWork <= 60) {
             workMinutes = newWork;
-            remainingSec = workMinutes * 60;
-            updateDisplay();
+            if (!breakActive) {
+                remainingSec = workMinutes * 60;
+                updateDisplay();
+            }
         }
         localStorage.setItem('notif', notifEnabled);
         localStorage.setItem('sound', soundEnabled);
         localStorage.setItem('breakDur', breakDuration);
         localStorage.setItem('volume', volume);
         localStorage.setItem('workMinutes', workMinutes);
-        alert("Settings saved!");
+        alert("සැකසුම් සුරකින ලදි!");
     };
-
-    // Theme
+    
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.onclick = () => {
             let theme = btn.dataset.theme;
@@ -694,8 +733,7 @@
             else document.body.style.background = "linear-gradient(135deg, #0a0f1e, #0f172a)";
         };
     });
-
-    // Navigation
+    
     navHome.onclick = () => { 
         mainView.classList.remove('hidden'); 
         settingsView.classList.add('hidden');
@@ -708,33 +746,22 @@
         navSettings.classList.add('active');
         navHome.classList.remove('active');
     };
-
-    // Screen ON/OFF
-    document.addEventListener('visibilitychange', () => {
-        screenOn = !document.hidden;
-        if (screenOn && !mainInterval && remainingSec > 0) startMainTimer();
-        else if (!screenOn && mainInterval) clearInterval(mainInterval);
-    });
-
-    document.getElementById('resetBtn').onclick = () => { 
-        remainingSec = workMinutes * 60; 
-        updateDisplay(); 
-        startMainTimer(); 
-    };
-    document.getElementById('pauseBtn').onclick = () => { 
-        if(mainInterval) clearInterval(mainInterval); 
-        isActive=false; 
-        document.getElementById('statusText').innerHTML = '<span class="status-paused">⏸️ Paused</span>';
-    };
-
-    // Init
+    
+    document.getElementById('resetBtn').onclick = resetTimer;
+    document.getElementById('pauseBtn').onclick = pauseTimer;
+    
+    // ========== INITIALIZATION ==========
     loadStats();
     loadSettings();
     updateLanguage();
-    screenOn = true;
+    isTimerRunning = true;
     remainingSec = workMinutes * 60;
     updateDisplay();
-    startMainTimer();
+    
+    // Start simple interval timer
+    startTimer();
+    
+    // Request notification permission
     if (Notification.permission === 'default') Notification.requestPermission();
 </script>
 </body>
