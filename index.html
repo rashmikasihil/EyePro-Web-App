@@ -117,6 +117,7 @@
         .status-active { color: #4ade80; }
         .status-paused { color: #f97316; }
         .status-break { color: #5eead4; }
+        .status-hidden { color: #94a3b8; }
 
         .btn-group {
             display: flex;
@@ -290,6 +291,27 @@
             padding: 10px;
             margin-top: 8px;
         }
+        
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2dd4bf;
+            color: #0a0f1e;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            z-index: 200;
+            animation: fadeOut 2s ease-in-out;
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            70% { opacity: 1; }
+            100% { opacity: 0; visibility: hidden; }
+        }
     </style>
 </head>
 <body>
@@ -443,6 +465,7 @@
     let notifEnabled = true, soundEnabled = true, breakDuration = 20, volume = 70, workMinutes = 20;
     let remainingSec = workMinutes * 60;
     let isTimerRunning = true;
+    let isAppVisible = true;  // App minimize status
     let timerInterval = null;
     let breakActive = false;
     let breakRemaining = 0;
@@ -456,7 +479,15 @@
     const timerDisplay = document.getElementById('timerDisplay');
     const statusSpan = document.getElementById('statusText');
 
-    // ========== TIMER LOGIC (Simple setInterval - no milliseconds) ==========
+    function showToast(message) {
+        let toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerText = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+
+    // ========== TIMER LOGIC ==========
     function updateDisplay() {
         if (breakActive) {
             timerDisplay.innerHTML = `👁️ ${Math.ceil(breakRemaining)}s`;
@@ -471,19 +502,23 @@
         if (timerInterval) clearInterval(timerInterval);
         
         timerInterval = setInterval(() => {
+            // Timer එක නතර කළ යුතු කොන්දේසි:
+            // 1. User pause කළා නම්
+            // 2. App එක visible නැත්නම් (minimize/home ගියාම) -  මේකෙන් timer නතර වෙනවා
+            //    නමුත් ඔයාට ඕන minimize වුණාට timer නතර නොවෙන්න. ඒ නිසා මේ condition එක ඉවත් කළා.
+            
             if (!isTimerRunning) return;
             
             if (breakActive) {
                 breakRemaining--;
                 if (breakRemaining <= 0) {
-                    // Break finished
                     breakActive = false;
                     addCompletion();
                     remainingSec = workMinutes * 60;
                     updateDisplay();
                     statusSpan.innerHTML = '<span class="status-active">✅ විවේකය නිමයි!</span>';
                     setTimeout(() => {
-                        if (isTimerRunning && !breakActive) {
+                        if (isTimerRunning && !breakActive && isAppVisible) {
                             statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
                         }
                     }, 2000);
@@ -499,7 +534,7 @@
                     startBreak();
                 } else {
                     updateDisplay();
-                    if (isTimerRunning) {
+                    if (isTimerRunning && isAppVisible && !breakActive) {
                         statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
                     }
                 }
@@ -514,6 +549,7 @@
         sendBreakNotification();
         playBeep();
         statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${breakDuration} තත්</span>`;
+        showToast("🔔 විවේක කාලය! ඈත බලන්න!");
     }
     
     function addCompletion() {
@@ -540,14 +576,40 @@
         isTimerRunning = true;
         updateDisplay();
         statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+        showToast("⟳ ටයිමරය නැවත ආරම්භ කරන ලදි");
     }
     
     function pauseTimer() {
         isTimerRunning = !isTimerRunning;
         if (!isTimerRunning) {
             statusSpan.innerHTML = '<span class="status-paused">⏸️ නවතා ඇත</span>';
-        } else if (!breakActive) {
+            showToast("⏸️ ටයිමරය නවතා ඇත");
+        } else if (!breakActive && isAppVisible) {
             statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+            showToast("▶️ ටයිමරය නැවත ආරම්භ කරන ලදි");
+        }
+    }
+    
+    // ========== VISIBILITY API - App Minimize Detect ==========
+    // IMPORTANT: Browser API එකෙන් Screen Lock detect කරන්න බැහැ.
+    // මෙය detect කරන්නේ App minimize/home ගියාම විතරයි.
+    function handleVisibilityChange() {
+        if (document.hidden) {
+            // App එක minimize හෝ home ගියා
+            isAppVisible = false;
+            console.log("App minimized - Timer continues (not stopping)");
+            // Timer එක නතර නොකරයි - දිගටම වැඩ කරයි
+            statusSpan.innerHTML = '<span class="status-hidden">📱 App background එකේ</span>';
+        } else {
+            // App එක නැවත open කළා
+            isAppVisible = true;
+            console.log("App reopened - Timer continues from where it was");
+            if (!breakActive && isTimerRunning) {
+                statusSpan.innerHTML = '<span class="status-active">🟢 ක්‍රියාකාරීයි</span>';
+            } else if (breakActive) {
+                statusSpan.innerHTML = `<span class="status-break">🔭 ඈත බලන්න! ${Math.ceil(breakRemaining)} තත්</span>`;
+            }
+            showToast("📱 යෙදුම නැවත විවෘත කරන ලදි");
         }
     }
     
@@ -722,7 +784,7 @@
         localStorage.setItem('breakDur', breakDuration);
         localStorage.setItem('volume', volume);
         localStorage.setItem('workMinutes', workMinutes);
-        alert("සැකසුම් සුරකින ලදි!");
+        showToast("✓ සැකසුම් සුරකින ලදි");
     };
     
     document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -750,19 +812,26 @@
     document.getElementById('resetBtn').onclick = resetTimer;
     document.getElementById('pauseBtn').onclick = pauseTimer;
     
+    // Visibility change - detect minimize/home
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     // ========== INITIALIZATION ==========
     loadStats();
     loadSettings();
     updateLanguage();
     isTimerRunning = true;
+    isAppVisible = true;
     remainingSec = workMinutes * 60;
     updateDisplay();
     
-    // Start simple interval timer
+    // Start timer
     startTimer();
     
     // Request notification permission
     if (Notification.permission === 'default') Notification.requestPermission();
+    
+    console.log("App started - Timer will continue when minimized");
+    console.log("NOTE: Screen lock detection is NOT possible with Web Browser API");
 </script>
 </body>
 </html>
