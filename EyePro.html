@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <title>20-20-20 Vision Pro | No Scroll</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Fix full height without scroll */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(145deg, #0a0f1e 0%, #0f172a 100%);
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Main wrapper - fits exactly without scroll bar issues */
+        .app-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 12px 12px 70px 12px;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .app-wrapper::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        }
+
+        /* Language Bar */
+        .lang-bar {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+        .lang-btn {
+            background: rgba(255,255,255,0.08);
+            border: none;
+            padding: 6px 14px;
+            border-radius: 30px;
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lang-btn.active {
+            background: #2dd4bf;
+            color: #0a0f1e;
+        }
+
+        /* Cards - compact design */
+        .card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        /* Timer Section - Main Focus */
+        .timer-section {
+            text-align: center;
+            background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(15,23,42,0.7));
+            border-radius: 48px;
+            padding: 20px 16px;
+        }
+        .timer-digits {
+            font-size: 4rem;
+            font-weight: 800;
+            font-family: 'SF Mono', monospace;
+            letter-spacing: 6px;
+            background: linear-gradient(135deg, #5eead4, #38bdf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .timer-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+        .status {
+            margin-top: 8px;
+            padding: 4px 12px;
+            background: rgba(0,0,0,0.4);
+            display: inline-block;
+            border-radius: 40px;
+            font-size: 0.7rem;
+        }
+        .status-active { color: #4ade80; }
+        .status-paused { color: #f97316; }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .btn {
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+            flex: 1;
+            max-width: 120px;
+            font-size: 0.85rem;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary {
+            background: #0f766e;
+            color: white;
+        }
+        .btn-secondary {
+            background: #334155;
+            color: white;
+        }
+
+        /* Stats Row - Compact */
+        .stats-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .stat-box {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border-radius: 24px;
+            padding: 10px 6px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #2dd4bf;
+        }
+        .stat-label {
+            font-size: 0.6rem;
+            color: #94a3b8;
+        }
+
+        /* Chart Section */
+        .chart-container {
+            background: #0a0f1c;
+            border-radius: 24px;
+            padding: 10px;
+            margin: 8px 0;
+        }
+        canvas {
+            width: 100%;
+            height: auto;
+            max-height: 120px;
+        }
+        .week-bars {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .day-bar {
+            flex: 1;
+            text-align: center;
+            font-size: 0.6rem;
+        }
+
+        /* Settings Panel - Compact */
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .toggle-switch {
+            width: 48px;
+            height: 26px;
+            background: #334155;
+            border-radius: 40px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .toggle-switch.active {
+            background: #2dd4bf;
+        }
+        .toggle-knob {
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.2s;
+        }
+        .toggle-switch.active .toggle-knob {
+            left: 24px;
+        }
+        .time-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #0f172a;
+            padding: 5px 12px;
+            border-radius: 40px;
+        }
+        .time-input-group input {
+            background: #020617;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 30px;
+            color: white;
+            width: 65px;
+            text-align: center;
+        }
+        .slider {
+            width: 150px;
+            margin: 0;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 15, 30, 0.95);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 16px 18px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.65rem;
+            cursor: pointer;
+            padding: 6px 20px;
+            border-radius: 30px;
+        }
+        .nav-item.active {
+            color: #2dd4bf;
+            background: rgba(45, 212, 191, 0.1);
+        }
+        .nav-icon {
+            font-size: 1.3rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Work duration setting special */
+        .work-time-row {
+            background: linear-gradient(135deg, #2dd4bf10, #38bdf810);
+            border-radius: 20px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-wrapper" id="appWrapper">
+    <!-- Language Bar -->
+    <div class="lang-bar">
+        <button class="lang-btn" data-lang="si">🇱🇰 සිංහල</button>
+        <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+        <button class="lang-btn" data-lang="ta">🇱🇰 தமிழ்</button>
+    </div>
+
+    <!-- Main Timer View -->
+    <div id="mainView">
+        <div class="card timer-section">
+            <div class="timer-digits" id="timerDisplay">20:00</div>
+            <div class="timer-label" id="timerLabel">ඊළඟ විවේකයට ඉතිරි කාලය</div>
+            <div class="status">
+                <span id="statusText" class="status-active">🟢 ක්‍රියාකාරීයි</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="resetBtn">⟳ <span id="resetText">නැවත</span></button>
+                <button class="btn btn-secondary" id="pauseBtn">⏸️ <span id="pauseText">නවත්වන්න</span></button>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-number" id="todayCount">0</div>
+                <div class="stat-label" id="todayLabel">අද විවේක</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="weekTotal">0</div>
+                <div class="stat-label" id="weekLabel">මෙම සතිය</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="streakCount">0</div>
+                <div class="stat-label" id="streakLabel">අඛණ්ඩ දින</div>
+            </div>
+        </div>
+
+        <!-- Chart Card -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span id="chartTitle" style="font-size: 0.8rem; font-weight: 600;">📊 සතිපතා වාර්තාව</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="weeklyCanvas" width="400" height="100"></canvas>
+            </div>
+            <div class="week-bars" id="weekLabels"></div>
+        </div>
+    </div>
+
+    <!-- Settings View -->
+    <div id="settingsView" class="hidden">
+        <div class="card">
+            <h3 style="margin-bottom: 12px; font-size: 1rem;" id="settingsTitle">⚙️ සැකසුම්</h3>
+            
+            <div class="setting-row">
+                <span>🔔 <span id="notifLabel">දැනුම්දීම්</span></span>
+                <div class="toggle-switch" id="notifToggle">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span>🎵 <span id="soundLabel">ශබ්ද දැනුම්දීම</span></span>
+                <div class="toggle-switch" id="soundToggle">
+                    <div class="toggle-knob"></div>
+                </div>
+            </div>
+            
+            <!-- විනාඩි 20 වෙනස් කිරීමේ අංශය (Work Duration) -->
+            <div class="work-time-row">
+                <div class="setting-row">
+                    <span>⏰ <span id="workLabel">වැඩ කාලය (විනාඩි)</span></span>
+                    <div class="time-input-group">
+                        <input type="number" id="workMinutesInput" min="1" max="60" value="20" step="1">
+                        <span id="minLabel">විනාඩි</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <span>⏱️ <span id="breakLabel">විවේක කාලය</span></span>
+                <div class="time-input-group">
+                    <input type="number" id="breakTimeInput" min="5" max="45" value="20">
+                    <span id="secLabel">තත්පර</span>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span>🎨 <span id="themeLabel">තේමාව</span></span>
+                <div class="theme-buttons" style="display: flex; gap: 8px;">
+                    <button class="theme-btn" data-theme="dark" style="width:32px;height:32px;border-radius:50%;background:#0a0f1e;border:2px solid #2dd4bf;"></button>
+                    <button class="theme-btn" data-theme="light" style="width:32px;height:32px;border-radius:50%;background:#e2e8f0;"></button>
+                    <button class="theme-btn" data-theme="blue" style="width:32px;height:32px;border-radius:50%;background:#1e3a5f;"></button>
+                </div>
+            </div>
+            <div class="setting-row">
+                <span>📢 <span id="volumeLabel">පරිමාව</span></span>
+                <input type="range" id="volumeSlider" min="0" max="100" value="70" class="slider" style="width:140px;">
+            </div>
+            <button class="btn btn-primary" id="saveSettingsBtn" style="width:100%; margin-top: 12px; padding: 10px;">💾 <span id="saveText">සුරකින්න</span></button>
+        </div>
+        
+        <div class="card">
+            <h3 style="font-size: 0.9rem;">ℹ️ <span id="infoTitle">තොරතුරු</span></h3>
+            <p id="infoText" style="font-size: 0.7rem; line-height: 1.4;">20-20-20 නීතිය: සෑම විනාඩි 20කට වරක් තත්පර 20ක් අඩි 20ක් ඈත බලන්න. ඔබේ ඇස් සෞඛ්‍යය ආරක්ෂා කරගන්න!</p>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <button class="nav-item active" id="navHome">
+        <div class="nav-icon">⏱️</div>
+        <span id="navHomeText">ටයිමරය</span>
+    </button>
+    <button class="nav-item" id="navSettings">
+        <div class="nav-icon">⚙️</div>
+        <span id="navSettingsText">සැකසුම්</span>
+    </button>
+</div>
+
+<script>
+    // ==================== MULTI-LANGUAGE ====================
+    const translations = {
+        si: {
+            timerLabel: "ඊළඟ විවේකයට ඉතිරි කාලය", resetText: "නැවත", pauseText: "නවත්වන්න",
+            todayLabel: "අද විවේක", weekLabel: "මෙම සතිය", streakLabel: "අඛණ්ඩ දින",
+            chartTitle: "📊 සතිපතා වාර්තාව", settingsTitle: "⚙️ සැකසුම්", notifLabel: "දැනුම්දීම්",
+            soundLabel: "ශබ්ද දැනුම්දීම", breakLabel: "විවේක කාලය (තත්පර)", workLabel: "වැඩ කාලය (විනාඩි)",
+            themeLabel: "තේමාව", volumeLabel: "පරිමාව", saveText: "සුරකින්න", infoTitle: "තොරතුරු",
+            navHomeText: "ටයිමරය", navSettingsText: "සැකසුම්", secLabel: "තත්", minLabel: "විනාඩි",
+            infoText: "20-20-20 නීතිය: සෑම විනාඩි 20කට වරක් තත්පර 20ක් අඩි 20ක් ඈත බලන්න. ඔබේ ඇස් සෞඛ්‍යය ආරක්ෂා කරගන්න!"
+        },
+        en: {
+            timerLabel: "Time until next break", resetText: "Reset", pauseText: "Pause",
+            todayLabel: "Today's breaks", weekLabel: "This week", streakLabel: "Day streak",
+            chartTitle: "📊 Weekly Report", settingsTitle: "⚙️ Settings", notifLabel: "Notifications",
+            soundLabel: "Sound alerts", breakLabel: "Break (seconds)", workLabel: "Work (minutes)",
+            themeLabel: "Theme", volumeLabel: "Volume", saveText: "Save", infoTitle: "Info",
+            navHomeText: "Timer", navSettingsText: "Settings", secLabel: "sec", minLabel: "min",
+            infoText: "20-20-20 Rule: Every 20 minutes, look 20 feet away for 20 seconds. Protect your eyes!"
+        },
+        ta: {
+            timerLabel: "அடுத்த இடைவெளி வரை", resetText: "மீட்டமை", pauseText: "இடைநிறுத்து",
+            todayLabel: "இன்றைய இடைவெளிகள்", weekLabel: "இந்த வாரம்", streakLabel: "தொடர் நாட்கள்",
+            chartTitle: "📊 வாராந்திர அறிக்கை", settingsTitle: "⚙️ அமைப்புகள்", notifLabel: "அறிவிப்புகள்",
+            soundLabel: "ஒலி அறிவிப்புகள்", breakLabel: "இடைவெளி (விநாடி)", workLabel: "வேலை நேரம் (நிமிடம்)",
+            themeLabel: "கருப்பொருள்", volumeLabel: "ஒலி அளவு", saveText: "சேமி", infoTitle: "தகவல்",
+            navHomeText: "டைமர்", navSettingsText: "அமைப்புகள்", secLabel: "விநா", minLabel: "நிமி",
+            infoText: "20-20-20 விதி: ஒவ்வொரு 20 நிமிடங்களுக்கும், 20 விநாடிகள் 20 அடி தூரம் பார்க்கவும்!"
+        }
+    };
+
+    let currentLang = 'si';
+    let notifEnabled = true, soundEnabled = true, breakDuration = 20, volume = 70, workMinutes = 20;
+    let remainingSec = workMinutes * 60, isActive = false, screenOn = true, mainInterval = null, breakInterval = null;
+    let weeklyData = [0,0,0,0,0,0,0], todayCount = 0, streak = 0, lastDate = "";
+
+    // DOM
+    const mainView = document.getElementById('mainView');
+    const settingsView = document.getElementById('settingsView');
+    const navHome = document.getElementById('navHome');
+    const navSettings = document.getElementById('navSettings');
+
+    function updateLanguage() {
+        const t = translations[currentLang];
+        document.getElementById('timerLabel').innerText = t.timerLabel;
+        document.getElementById('resetText').innerText = t.resetText;
+        document.getElementById('pauseText').innerText = t.pauseText;
+        document.getElementById('todayLabel').innerText = t.todayLabel;
+        document.getElementById('weekLabel').innerText = t.weekLabel;
+        document.getElementById('streakLabel').innerText = t.streakLabel;
+        document.getElementById('chartTitle').innerText = t.chartTitle;
+        document.getElementById('settingsTitle').innerText = t.settingsTitle;
+        document.getElementById('notifLabel').innerText = t.notifLabel;
+        document.getElementById('soundLabel').innerText = t.soundLabel;
+        document.getElementById('breakLabel').innerText = t.breakLabel;
+        document.getElementById('workLabel').innerText = t.workLabel;
+        document.getElementById('themeLabel').innerText = t.themeLabel;
+        document.getElementById('volumeLabel').innerText = t.volumeLabel;
+        document.getElementById('saveText').innerText = t.saveText;
+        document.getElementById('infoTitle').innerText = t.infoTitle;
+        document.getElementById('infoText').innerText = t.infoText;
+        document.getElementById('navHomeText').innerText = t.navHomeText;
+        document.getElementById('navSettingsText').innerText = t.navSettingsText;
+        document.getElementById('secLabel').innerText = t.secLabel;
+        document.getElementById('minLabel').innerText = t.minLabel;
+    }
+
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentLang = btn.dataset.lang;
+            updateLanguage();
+            localStorage.setItem('lang', currentLang);
+        });
+    });
+
+    function updateDisplay() {
+        let mins = Math.floor(remainingSec / 60);
+        let secs = remainingSec % 60;
+        document.getElementById('timerDisplay').innerText = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+    }
+
+    function resetWorkDuration() {
+        remainingSec = workMinutes * 60;
+        updateDisplay();
+    }
+
+    function startMainTimer() {
+        if (mainInterval) clearInterval(mainInterval);
+        if (!screenOn) { isActive = false; return; }
+        isActive = true;
+        mainInterval = setInterval(() => {
+            if (isActive && screenOn && remainingSec > 0) {
+                remainingSec--;
+                updateDisplay();
+                if (remainingSec === 0) {
+                    clearInterval(mainInterval);
+                    startBreak();
+                }
+            }
+        }, 1000);
+    }
+
+    function playBeep() {
+        if (!soundEnabled) return;
+        try {
+            let ctx = new (window.AudioContext || window.webkitAudioContext)();
+            let osc = ctx.createOscillator();
+            let gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = volume / 100;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.6);
+            osc.stop(ctx.currentTime + 0.6);
+            if (ctx.state === 'suspended') ctx.resume();
+        } catch(e) {}
+    }
+
+    function sendNotif(title, body) {
+        if (notifEnabled && Notification.permission === 'granted') {
+            new Notification(title, { body });
+            playBeep();
+        }
+    }
+
+    function startBreak() {
+        if (mainInterval) clearInterval(mainInterval);
+        isActive = false;
+        let breakRemaining = breakDuration;
+        sendNotif("20-20-20 Vision", `Look 20 feet away for ${breakDuration} seconds!`);
+        if (breakInterval) clearInterval(breakInterval);
+        breakInterval = setInterval(() => {
+            if (breakRemaining > 0) {
+                document.getElementById('timerDisplay').innerHTML = `👁️ ${breakRemaining}s`;
+                breakRemaining--;
+            } else {
+                clearInterval(breakInterval);
+                breakInterval = null;
+                addCompletion();
+                remainingSec = workMinutes * 60;
+                updateDisplay();
+                startMainTimer();
+                document.getElementById('statusText').innerHTML = '<span class="status-active">✅ Break done</span>';
+                setTimeout(() => {
+                    if(isActive) document.getElementById('statusText').innerHTML = '<span class="status-active">🟢 Active</span>';
+                }, 2000);
+            }
+        }, 1000);
+    }
+
+    function addCompletion() {
+        const today = new Date().toDateString();
+        if (lastDate !== today) {
+            lastDate = today;
+            todayCount = 0;
+        }
+        todayCount++;
+        let wd = new Date().getDay();
+        let idx = wd === 0 ? 6 : wd - 1;
+        weeklyData[idx]++;
+        saveStats();
+        updateStatsUI();
+        renderChart();
+    }
+
+    function saveStats() {
+        localStorage.setItem('vision_stats', JSON.stringify({ weeklyData, todayCount, lastDate, streak }));
+    }
+
+    function loadStats() {
+        let saved = localStorage.getItem('vision_stats');
+        if (saved) {
+            let d = JSON.parse(saved);
+            weeklyData = d.weeklyData || [0,0,0,0,0,0,0];
+            todayCount = d.todayCount || 0;
+            lastDate = d.lastDate || "";
+            streak = d.streak || 0;
+            let today = new Date().toDateString();
+            if (lastDate !== today) todayCount = 0;
+        }
+        updateStatsUI();
+        renderChart();
+    }
+
+    function updateStatsUI() {
+        document.getElementById('todayCount').innerText = todayCount;
+        let total = weeklyData.reduce((a,b)=>a+b,0);
+        document.getElementById('weekTotal').innerText = total;
+        document.getElementById('streakCount').innerText = streak;
+    }
+
+    function renderChart() {
+        let canvas = document.getElementById('weeklyCanvas');
+        let ctx = canvas.getContext('2d');
+        let w = canvas.clientWidth;
+        let h = 100;
+        canvas.width = w;
+        canvas.height = h;
+        ctx.clearRect(0,0,w,h);
+        let maxVal = Math.max(3, ...weeklyData);
+        let barW = (w-30)/7 - 3;
+        for(let i=0;i<7;i++) {
+            let val = weeklyData[i];
+            let barH = (val/maxVal)*(h-25);
+            let x = 15 + i*(barW+5);
+            let y = h-15-barH;
+            ctx.fillStyle = '#2dd4bf';
+            ctx.fillRect(x, y, barW, barH);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '8px system-ui';
+            ctx.fillText(val, x+barW/3, y-3);
+        }
+        let days = ['M','T','W','T','F','S','S'];
+        let labelDiv = document.getElementById('weekLabels');
+        labelDiv.innerHTML = '';
+        for(let i=0;i<7;i++) {
+            let div = document.createElement('div');
+            div.className = 'day-bar';
+            div.innerHTML = `<div>${days[i]}</div><div style="color:#5eead4; font-size:0.7rem;">${weeklyData[i]}</div>`;
+            labelDiv.appendChild(div);
+        }
+    }
+
+    // Settings
+    function loadSettings() {
+        notifEnabled = localStorage.getItem('notif') !== 'false';
+        soundEnabled = localStorage.getItem('sound') !== 'false';
+        breakDuration = parseInt(localStorage.getItem('breakDur')) || 20;
+        volume = parseInt(localStorage.getItem('volume')) || 70;
+        workMinutes = parseInt(localStorage.getItem('workMinutes')) || 20;
+        document.getElementById('breakTimeInput').value = breakDuration;
+        document.getElementById('workMinutesInput').value = workMinutes;
+        document.getElementById('volumeSlider').value = volume;
+        updateToggles();
+        resetWorkDuration();
+    }
+    function updateToggles() {
+        let nt = document.getElementById('notifToggle');
+        let st = document.getElementById('soundToggle');
+        if (notifEnabled) nt.classList.add('active'); else nt.classList.remove('active');
+        if (soundEnabled) st.classList.add('active'); else st.classList.remove('active');
+    }
+    document.getElementById('notifToggle').onclick = () => { notifEnabled = !notifEnabled; updateToggles(); };
+    document.getElementById('soundToggle').onclick = () => { soundEnabled = !soundEnabled; updateToggles(); };
+    document.getElementById('saveSettingsBtn').onclick = () => {
+        breakDuration = parseInt(document.getElementById('breakTimeInput').value);
+        volume = parseInt(document.getElementById('volumeSlider').value);
+        let newWork = parseInt(document.getElementById('workMinutesInput').value);
+        if (newWork >= 1 && newWork <= 60) {
+            workMinutes = newWork;
+            remainingSec = workMinutes * 60;
+            updateDisplay();
+        }
+        localStorage.setItem('notif', notifEnabled);
+        localStorage.setItem('sound', soundEnabled);
+        localStorage.setItem('breakDur', breakDuration);
+        localStorage.setItem('volume', volume);
+        localStorage.setItem('workMinutes', workMinutes);
+        alert("Settings saved!");
+    };
+
+    // Theme
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.onclick = () => {
+            let theme = btn.dataset.theme;
+            if (theme === 'light') document.body.style.background = "#e2e8f0";
+            else if (theme === 'blue') document.body.style.background = "linear-gradient(135deg, #1e3a5f, #0f172a)";
+            else document.body.style.background = "linear-gradient(135deg, #0a0f1e, #0f172a)";
+        };
+    });
+
+    // Navigation
+    navHome.onclick = () => { 
+        mainView.classList.remove('hidden'); 
+        settingsView.classList.add('hidden');
+        navHome.classList.add('active');
+        navSettings.classList.remove('active');
+    };
+    navSettings.onclick = () => { 
+        mainView.classList.add('hidden'); 
+        settingsView.classList.remove('hidden');
+        navSettings.classList.add('active');
+        navHome.classList.remove('active');
+    };
+
+    // Screen ON/OFF
+    document.addEventListener('visibilitychange', () => {
+        screenOn = !document.hidden;
+        if (screenOn && !mainInterval && remainingSec > 0) startMainTimer();
+        else if (!screenOn && mainInterval) clearInterval(mainInterval);
+    });
+
+    document.getElementById('resetBtn').onclick = () => { 
+        remainingSec = workMinutes * 60; 
+        updateDisplay(); 
+        startMainTimer(); 
+    };
+    document.getElementById('pauseBtn').onclick = () => { 
+        if(mainInterval) clearInterval(mainInterval); 
+        isActive=false; 
+        document.getElementById('statusText').innerHTML = '<span class="status-paused">⏸️ Paused</span>';
+    };
+
+    // Init
+    loadStats();
+    loadSettings();
+    updateLanguage();
+    screenOn = true;
+    remainingSec = workMinutes * 60;
+    updateDisplay();
+    startMainTimer();
+    if (Notification.permission === 'default') Notification.requestPermission();
+</script>
+</body>
+</html>
